@@ -1,4 +1,4 @@
-from sklearn.model_selection import cross_val_score, KFold, GridSearchCV, ParameterGrid
+from sklearn.model_selection import cross_val_score, KFold, GridSearchCV, RandomizedSearchCV, ParameterGrid
 from tqdm import tqdm
 import numpy as np
 
@@ -21,8 +21,8 @@ def train_and_evaluate(model, X_train, y_train, cv=5):
     model.fit(X_train, y_train)
     return model
 
-def tune_hyperparameters(model, param_grid, X_train, y_train, cv=5):
-    grid_search = GridSearchCV(model, param_grid, cv=cv, scoring='r2', verbose=3, n_jobs=-1)
+def tune_hyperparameters(model, param_grid, X_train, y_train, cv=5, randomsearch=True, n_iter=10):
+    grid_search = RandomizedSearchCV(model, param_grid, cv=cv, scoring='r2', verbose=3, n_jobs=8, n_iter=n_iter) if randomsearch else GridSearchCV(model, param_grid, cv=cv, scoring='r2', verbose=3, n_jobs=-1) 
     with tqdm(total=len(list(ParameterGrid(param_grid))), desc="Grid search") as pbar:
         grid_search.fit(X_train, y_train)
         pbar.update(len(grid_search.cv_results_['params']))

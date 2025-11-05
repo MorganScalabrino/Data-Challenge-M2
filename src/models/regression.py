@@ -30,7 +30,7 @@ class RandomForestModel(BaseModelWrapper):
         super().__init__(model)
 
 class GradientBoostingModel(BaseModelWrapper):
-    def __init__(self, n_estimators=300, random_state=42, **kwargs):
+    def __init__(self, n_estimators=100, random_state=42, **kwargs):
         model = GradientBoostingRegressor(n_estimators=n_estimators, random_state=random_state, **kwargs)
         super().__init__(model)
 
