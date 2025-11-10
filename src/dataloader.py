@@ -66,12 +66,12 @@ class SpotifyDataLoader:
         to_dense = FunctionTransformer(lambda x: x.toarray(), accept_sparse=True)
         pipeline = Pipeline([
             ('preprocessor', self.preprocessor),
-            ('to_dense', to_dense),
+            #('to_dense', to_dense),
             ('sparse_pca', SparsePCA(n_components=n_components))
         ])
         return pipeline.fit_transform(X), pipeline
     
-    def apply_tsne(self, X, n_components=2, by=None, except_col=None):
+    def apply_tsne(self, X, n_components=2, by=None, except_col=[]):
         # Create transformers
         numerical_transformer = StandardScaler()
         categorical_transformer = OneHotEncoder(handle_unknown='ignore')
@@ -104,7 +104,7 @@ class SpotifyDataLoader:
             red_dict["not filtered"] = {"X" : X, "X_red" : pipeline.fit_transform(X), "filter" : [True]*len(X), "pipeline" : pipeline}
         return red_dict
     
-    def apply_umap(self, X, n_components=2, by=None, except_col=None):
+    def apply_umap(self, X, n_components=2, by=None, except_col=[]):
         # Create transformers
         numerical_transformer = StandardScaler()
         categorical_transformer = OneHotEncoder(handle_unknown='ignore')

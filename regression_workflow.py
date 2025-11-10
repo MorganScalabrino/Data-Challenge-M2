@@ -15,8 +15,7 @@ X_train = dataloader.preprocess_data(X_train)
 # Initialize and train model
 if model == "random_forest":
     model = RandomForestModel()
-    #param_grid = {'n_estimators': [500], 'max_depth': [None, 10, 20], 'min_samples_split': [2, 5, 10, 15]}
-    param_grid = {'n_estimators': [500], 'max_depth': [None, 20], 'min_samples_split': [10]}
+    param_grid = {'n_estimators': [500], 'max_depth': [None, 10, 20], 'max_features': [3, 4], 'min_samples_split': [2, 5, 10, 15]}
 elif model == "gradient_boosting":
     model = GradientBoostingModel()
     # param_grid = {'n_estimators': [300, 350, 400, 500], 'learning_rate' : [0.05, 0.07, 0.1], 'max_depth': [30, 20, 15, 10, 5, 3], 'min_samples_split': [2], 'subsample': [0.8, 0.7, 0.6]}
