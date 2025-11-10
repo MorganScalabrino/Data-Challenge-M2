@@ -19,10 +19,32 @@ if model == "random_forest":
     param_grid = {'n_estimators': [500], 'max_depth': [None, 20], 'min_samples_split': [10]}
 elif model == "gradient_boosting":
     model = GradientBoostingModel()
-    param_grid = {'n_estimators': [300, 350, 400], 'learning_rate' : [0.05, 0.001], 'max_depth': [None, 20], 'min_samples_split': [5, 7, 10], 'subsample': [0.8, 0.7, 0.6]}
+    # param_grid = {'n_estimators': [300, 350, 400, 500], 'learning_rate' : [0.05, 0.07, 0.1], 'max_depth': [30, 20, 15, 10, 5, 3], 'min_samples_split': [2], 'subsample': [0.8, 0.7, 0.6]}
+    param_grid = {'n_estimators': [400, 450, 500], 'learning_rate' : [0.05], 'max_depth': [30, 20], 'min_samples_split': [2], 'subsample': [0.9, 0.8]}
 
 # Tune hyperparameters
-best_model = tune_hyperparameters(model, param_grid, X_train, y_train, randomsearch=True, n_iter=20)
+best_model = tune_hyperparameters(model, param_grid, X_train, y_train, randomsearch=True, n_iter=40, n_jobs=-1)
 
 # Generate predictions
-generate_predictions(best_model, dataloader.test_path, dataloader.preprocessor, output_path=os.path.join('..', 'regression_task', 'submission_gb_1.csv'))
+generate_predictions(best_model, dataloader.test_path, dataloader.preprocessor, output_path=os.path.join('..', 'regression_task', 'submission_gb_6_noonehot_best.csv'))
+
+
+# gb_2
+# Best parameters: {'subsample': 0.6, 'n_estimators': 350, 'min_samples_split': 10, 'max_depth': None, 'learning_rate': 0.05}
+# Best R²: 0.4737
+
+# gb_3
+# Best parameters: {'subsample': 0.7, 'n_estimators': 350, 'min_samples_split': 2, 'max_depth': 10, 'learning_rate': 0.1}
+# Best R²: 0.4293
+
+# gb_4 no one hot encoding
+# Best parameters: {'subsample': 0.7, 'n_estimators': 400, 'min_samples_split': 2, 'max_depth': 10, 'learning_rate': 0.1}
+# Best R²: 0.4585
+
+# gb_5 no one hot encoding
+# Best parameters: {'subsample': 0.8, 'n_estimators': 400, 'min_samples_split': 2, 'max_depth': 15, 'learning_rate': 0.05}
+# Best R²: 0.5010
+
+# gb_6 no one hot encoding
+# Best parameters: {'subsample': 0.8, 'n_estimators': 400, 'min_samples_split': 2, 'max_depth': 20, 'learning_rate': 0.05}
+# Best R²: 0.4977
