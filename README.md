@@ -1,6 +1,9 @@
 # Data-Challenge-M2
 Data challenge of the first semester of M2 math and IA at University Paris-Saclay, consisting in two prediction tasks on tabular data : a regression task to predict spotify tracks popularity from various features (genre, danceability, mode...) and a classification task to predict wether a reservation in a hotel will be canceled or not.
 
+## Datasets
+Train and test datasets for classification and regression tasks are supposed to be in two folders at the same level as this repository, named classification_task and regression_task, respectively.
+
 ## Code roadmap
 
 ### Main functions
