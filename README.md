@@ -1,64 +1,18 @@
 # Data-Challenge-M2
-Data challenge of the first semester of M2 math and IA at university paris saclay, a regression task and a classification task on tabular data.
+Data challenge of the first semester of M2 math and IA at University Paris-Saclay, consisting in two prediction tasks on tabular data : a regression task to predict spotify tracks popularity from various features (genre, danceability, mode...) and a classification task to predict wether a reservation in a hotel will be canceled or not.
 
-code roadmap : 
-we have the mains launchs files in bin.Project_launcher_xxx
-we have the evalhooks in src.evaluation
-we have the dataset loading and feature enginnering in src.dataset 
-we have the training loop in src.training
-we have the choice and setup of the models in src.models
+## Code roadmap
 
-each time we divide into two file with the spec for each task
-in the base we create the base class with arguments and functions that are common to each task and in the classification and regression we create a class that heritate from the base class and has more functions and param according to the task
+### Main functions
+- Training, tuning and results obtention workflows for the two tasks can be found in classification_workflow.py and regression_workflow.py
+- Function to produce predictions on test set can be found in src.evaluation
+- DataLoaders with feature preprocessing and visualization methods are in dataloader.py (for both tasks)
+- Training and fine tuning functions are defined in src.training
+- Used models are defined in src.models
 
+We divide each one of these folders in two file (classification.py and regression.py) with the specific capacities for each task.
 
-
-Brouillon :
-
-DATA CHALLENGE : 
-
-Methods list : 
-Linear regression => RIDGE LASSO
-regressio polynomiale (ou juste kernel linear reg)
-Logistic regression 
-GLM
-GAM 
-KNN
-FOREST
-LightGBM=> whatever that is
-CatBoost => whatever that is
-TREE
-XGBOOST / BOOTSTRAPING
-SVM
-TIME SERIES autoregressif anova shit => yannig goude
-KERNEL METHODS ON PRECEDENT ALGO
-PERCEPTRONS MLP
-FOUNDATION MODEL ON TABULAR DATA =PORTAL 
-
-GRaph neural network ? Tabnet ? transformers for tabular
-
-
-Feature engineering très important (géoloc, horaires, distance réelle, etc.)
-Utilise des interactions non-linéaires
-Encode les heures en sin/cos pour tenir compte de leur périodicité
-Regroupe les zones géographiques avec du clustering (KMeans sur lat/lon)
-Utilise cross-validation pour évaluer la robustesse
-Attention aux outliers : les gros pourboires sont rares mais influents
-
-Recommandation pour débuter
-Baseline : Régression linéaire + quelques features simples
-Ensembles : XGBoost / LightGBM avec tuning
-Avancé : MLP avec features géographiques enrichies
-Bonus : Analyse des pourboires extrêmes avec quantile regression
-
-
-classif 
-log reg multiclass softmx ou one vs rest
-tree
-forest
-xgboost
-svm
-mlp
-naive bayes 
-knn
-ensemble 
+### Data exploration and results analysis
+- In data_exploration_classification.ipynb you can find the vizualisation of the classification dataset AND the vizualisation of the one vs all + binary model at the end of the file, you can also find just before that the greedy search algorithm to visualize the importance of the features via their positive or negative impact on the score.
+- In data_visualization_regression.ipynb, you will find visualization of the spotify dataset, correlations, popularity density plots, dimension reduction...
+- In regression_test_residuals.py you will be able to plot distributions of predicted popularity against real popularity on a validation test, for the best model we have. These are compared with a Q-Q plot and we compute KL divergence.
