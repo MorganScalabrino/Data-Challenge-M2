@@ -1,212 +1,31 @@
-import os
-import json
-from typing import Dict, List
-import warnings
+from sklearn.model_selection import cross_val_score, KFold, GridSearchCV, RandomizedSearchCV, ParameterGrid
+from tqdm import tqdm
+import numpy as np
 
+def train_and_evaluate(model, X_train, y_train, cv=5):
+    cv_scores = []
+    for train_idx, val_idx in tqdm(
+        KFold(n_splits=cv, random_state=42).split(X_train, y_train),
+        total=cv,
+        desc="Cross-validating"
+    ):
+        X_train_fold, X_val_fold = X_train[train_idx], X_train[val_idx]
+        y_train_fold, y_val_fold = y_train[train_idx], y_train[val_idx]
+        model.fit(X_train_fold, y_train_fold)
+        score = model.score(X_val_fold, y_val_fold)
+        cv_scores.append(score)
 
+    print(f"Cross-validated F1 weighted scores: {cv_scores}")
+    print(f"Mean F1 weighted: {np.mean(cv_scores):.4f}")
 
-from src.evaluation import ClassificationEvalHook, HierarchicalClassificationEvalHook
-from src.boards import BaseBoard
-from src.hxe_loss import HierarchyLoss
-from .base import BaseTrainer
-from src.__init__ import __version__
+    model.fit(X_train, y_train)
+    return model
 
-class FineTuningTrainer(BaseTrainer):
-    """Fine-tuning trainer class for a classification model. This class is used to train a model with a custom classification head.
-    """
-
-    def __init__(self,
-        savepath: str,
-        model: torch.nn.Module,
-        train_dataloader: torch.utils.data.DataLoader,
-        test_dataloader: torch.utils.data.DataLoader,
-        class_to_idx:dict,
-        scheduler: str="constant",
-        optimizer: torch.optim.Optimizer=SGD,
-        loss:torch.nn.Module=None,
-        epochs:int=100,
-        batch_size:int=4,
-        learning_rate:float=1e-4,
-        test_freq:int=10,
-        board:BaseBoard=None,
-        last_epoch:int=-1,
-        scoring_metric="test loss",
-        full_training: bool=False
-        ):
-        """
-        Initialize the trainin g process.
-
-        Args:
-            savepath (str): _description_
-            model (torch.nn.Module): _description_
-            train_dataloader (torch.utils.data.DataLoader): _description_
-            test_dataloader (torch.utils.data.DataLoader): _description_
-            class_to_idx (dict): _description_
-            scheduler (str, optional): _description_. Defaults to "constant".
-            optimizer (torch.optim.Optimizer, optional): _description_. Defaults to SGD.
-            loss (torch.nn.Module, optional): _description_. Defaults to None.
-            epochs (int, optional): _description_. Defaults to 100.
-            batch_size (int, optional): _description_. Defaults to 4.
-            learning_rate (float, optional): _description_. Defaults to 1e-4.
-            test_freq (int, optional): _description_. Defaults to 10.
-            board (BaseBoard, optional): _description_. Defaults to None.
-            last_epoch (int, optional): _description_. Defaults to -1.
-            scoring_metric (str, optional): _description_. Defaults to "test loss".
-            full_training (bool, optional): _description_. Defaults to False.           
-        """
-
-        super(FineTuningTrainer, self).__init__(
-            savepath=savepath,
-            model=model,
-            train_dataloader=train_dataloader,
-            test_dataloader=test_dataloader,
-            class_to_idx=class_to_idx,
-            scheduler=scheduler,
-            optimizer=optimizer,            
-            epochs=epochs,
-            batch_size=batch_size,
-            learning_rate=learning_rate,
-            test_freq=test_freq,
-            board=board,
-            last_epoch=last_epoch,
-            scoring_metric=scoring_metric,
-            full_training=full_training,
-            )
-
-        self._maximizing_metrics = ["ap", "roc auc", "precision", "recall"]
-        self._minimizing_metrics = ["test loss"] 
-        self.scoring_metric = scoring_metric
-        self.class_to_idx = class_to_idx
-        
-        self.loss = CrossEntropyLoss()
-
-        self.evalhook = ClassificationEvalHook(self.class_to_idx, scenario="multiclass")
-
-        if loss is not None:
-            warnings.warn("Loss function: Overriding {} with user specified {}".format(self.loss, loss))
-            self.loss = loss()
-
-        self.softmax = Softmax()
-
-        return None
-
-
-    def _training_step(self, x:torch.Tensor, target:torch.Tensor):
-        """Training step for a single iteration.
-
-        Args:
-            x (torch.Tensor): input tensor.
-            target (torch.Tensor): groundtruth tensor.
-        """
-        self.optimizer.zero_grad()
-        
-        y = self.model(x)        
-        
-        loss = self.loss(y, target)
-        
-        loss.backward()
-
-        self.optimizer.step()
-
-        self.optimizer.zero_grad()
-
-        self.epoch_loss += loss.item()*x.size(0)
-        
-        return None
-
-
-    def _get_val_model(self):
-        if self.perform_ema:
-            return self.ema_model
-
-        return self.model
-
-    def _test_hook(self, epoch) -> Dict[str, float]:
-        """Test hook over the whole test dataset.
-
-        Returns:
-            Dict[str, float]: metrics dictionary.
-        """
-        
-        self.iteration = 0
-
-        self.model.eval()
-        if self.perform_ema:
-            self.ema_model.eval()
-
-        val_model = self._get_val_model()
-
-        self.evalhook.reset()
-
-        self.test_loss = 0
-
-        with torch.no_grad():            
-            for x, target in self.test_dataloader:
-                
-                self.iteration += x.size(0)
-
-                x = x.to(self.device)
-
-                target = target.to(self.device)
-
-                y = val_model(x)
-
-                loss = self.loss(y, target)
-
-                self.test_loss += loss.item()*x.size(0)
-
-                y = self.softmax(y)
-
-                self.evalhook.append(y.cpu(), target.cpu())
-
-        self.evalhook.confusion_matrix()
-
-        metrics = dict()
-
-        metrics["AP"] = self.evalhook.average_precision()
-
-        metrics["ROC AUC"] = self.evalhook.auroc()
-
-        metrics["Precision"] = self.evalhook.precision()
-        
-        metrics["Recall"] = self.evalhook.recall()        
-        
-        return metrics
-
-
-    def _save_configuration_file(self, destination:str, checkpoint_name:str):
-        """Save a JSON storing hyperparameters 
-
-        >>> config = {
-        >>>     "model": "convnextv2_atto.fcmae_ft_in1k",
-        >>>     "head": "DropConnectLinearHead",
-        >>>     "checkpoint": "model.pth",
-        >>>     "classes names": [
-        >>>         "acari",
-        >>>         "annelida",
-        >>>         "myriapoda",
-        >>>     ],
-        >>>     "version": "0.5.1",
-        >>>     "optimizer": "AdamW_optimizer.pth"
-        >>> }
-        Args:
-            checkpoint_name (str): Name of the checkpoint file (e.g. checkpoint.pth).
-        """
-        config_dict = dict()
-        
-        config_dict["model"] = self.model.architecture
-
-        config_dict["head"] = self.model.head_type
-
-        config_dict["checkpoint"] = "model.pth"
-
-        config_dict["resize"] = self.train_dataloader.base_resize
-
-        config_dict["classes names"] = list(self.class_to_idx.keys())
-
-        config_dict["version"] = __version__
-
-        with open(os.path.join(destination, "config.json"), "w") as fhandler:
-            json.dump(config_dict, fhandler, sort_keys=False, indent=4)
-        
-        return None
+def tune_hyperparameters(model, param_grid, X_train, y_train, cv=5, randomsearch=True, n_iter=10, n_jobs=-1):
+    grid_search = RandomizedSearchCV(model, param_grid, cv=cv, scoring='f1-weighted', verbose=3, n_jobs=n_jobs, n_iter=n_iter, random_state=42) if randomsearch else GridSearchCV(model, param_grid, cv=cv, scoring='f1-weighted', verbose=3, n_jobs=n_jobs) 
+    with tqdm(total=len(list(ParameterGrid(param_grid))), desc="Grid search") as pbar:
+        grid_search.fit(X_train, y_train)
+        pbar.update(len(grid_search.cv_results_['params']))
+    print(f"Best parameters: {grid_search.best_params_}")
+    print(f"Best F1 weighted : {grid_search.best_score_:.4f}")
+    return grid_search.best_estimator_
